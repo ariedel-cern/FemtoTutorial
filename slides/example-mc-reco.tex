@@ -1,0 +1,147 @@
+\section{MC and reconstruction}
+
+\begin{frame}[fragile]{Example 4: reconstructed particles with MC truth}
+ \begin{lstlisting}
+"femto-producer": {
+  "processTracksV0sRun3pp": "false",
+  "processTracksV0sRun3ppMc": "true",
+  "CollisionBits": {"rctFlags": "0", "sel8": "1"}
+},
+"femto-track-qa": {"processData": "false", "processMc": "true"},
+"femto-v0-qa": {"processLambda": "false", "processLambdaMc": "true"}
+ \end{lstlisting}
+ \begin{itemize}
+ \item Reconstructed proton and $\Lambda$ candidates, linked to MC particles and collisions.
+ \item MC labels distinguish the requested species, physical primaries, decay products, material and wrong-collision associations.
+ \item Helper services also switch to MC: propagation, TPC PID and multiplicity truth tables.
+ \end{itemize}
+ \note{The example uses pp Run 3 MC input, not the data AO2D. RCT flags are disabled for this MC configuration. Loose producer DCA limits (0.5 cm in xy, 1 cm in z) retain tails for the template demonstration. The config is not a claim of data/MC calibration equivalence. Input defaults to root-level AO2D_MC.root; a local LHC24f3c_fix file was identified for workflow validation. Exactly one producer process is enabled.}
+ \src{O2Physics/PWGCF/Femto/Tasks/femtoTrackQa.cxx; O2Physics/PWGCF/Femto/Tasks/femtoV0Qa.cxx; O2Physics/PWGCF/Femto/TableProducer/femtoProducer.cxx}
+\end{frame}
+
+\begin{frame}[fragile]{MC QA: DCA distributions by particle origin}
+ \begin{columns}[T]
+ \begin{column}{.49\textwidth}
+ \begin{lstlisting}
+"TrackQaBinning1": {
+  "plotOrigins": "true",
+  "pdgCodesForMothersOfSecondary": {
+    "values": ["3122", "3222", "3312"]
+  }
+},
+"TrackBinning1": {
+  "pt": {"values": ["80", "0", "4"]},
+  "fractionDcaXy": {
+    "values": ["200", "-0.5", "0.5"]
+  },
+  "fractionDcaZ": {
+    "values": ["100", "-1", "1"]
+  }
+}
+ \end{lstlisting}
+ \end{column}
+ \begin{column}{.47\textwidth}
+ \small Under \texttt{TrackQA/FitVars/}:\par\medskip
+ \texttt{hFractionDca}: inclusive sample.\par\medskip
+ \texttt{hPrimary}, \texttt{hFromMaterial},\par
+ \texttt{hFromSecondary1/2/3},\par
+ \texttt{hFromSecondaryOther}.\par\medskip
+ Additional templates: \texttt{hMissidentified}, \texttt{hFromWrongCollision}, \texttt{hNoMcParticle}.\par\medskip
+ Three-dimensional sparse histograms: $p_{\rm T}\times{\rm DCA}_{xy}\times{\rm DCA}_{z}$.
+ \end{column}
+ \end{columns}
+ \note{The numbered secondary histograms follow the configured mother-PDG list, maximum three. These axes come from TrackBinning1, independently from the QA-only TrackQaBinning1.dcaXy/dcaZ axes. The producer must retain DCA tails before templates can be studied.}
+ \src{O2Physics/PWGCF/Femto/Core/trackHistManager.h}
+\end{frame}
+
+\begin{frame}[fragile]{MC pairing: FitVars accompany the pair sample}
+ \begin{lstlisting}
+"femto-pair-track-v0": {
+  "processLambdaSameEvent": "false",
+  "processLambdaMixedEvent": "false",
+  "processLambdaMixedEventWithTagging": "false",
+  "processLambdaSameEventMc": "true",
+  "processLambdaMixedEventMc": "true",
+  "TrackSelection1": {"pdgCodeAbs": "2212", "puritySlotMask": "1"}
+}
+ \end{lstlisting}
+ \begin{itemize}
+ \item MC pair processes include reconstructed FitVars and MC truth information.
+ \item Ordinary MC mixing is used here: automatic tag discovery in this checkout does not recognize the MC tagging switch.
+ \item Proton PID distributions support purity studies; DCA templates support primary/secondary fractions.
+ \item $\Lambda$ mass distributions support signal extraction; pointing-angle templates support origin fractions.
+ \end{itemize}
+ \note{The normal data, data-WithFitVars and MC process families are mutually exclusive. This checkout exposes a tagged MC process but discoverTaggedRoles only matches processLambdaMixedEventWithTagging*, not processLambdaMixedEventMcWithTagging. Startup fails for tagged MC; our runnable MC example therefore uses ordinary MC mixing. The reconstructed-data WithFitVars process in this checkout has no tagging variant; it uses ordinary event mixing.}
+ \src{O2Physics/PWGCF/Femto/Tasks/femtoPairTrackV0.cxx; O2Physics/PWGCF/Femto/Core/modes.h}
+\end{frame}
+
+\begin{frame}[fragile]{FitVars: which tables and which species?}
+ \begin{lstlisting}
+"TrackTables": {
+  "produceItsPurity": "-1", "produceTpcPurity": "-1",
+  "produceTofPurity": "-1", "produceTrackDcas": "-1"
+},
+"V0Tables": {"produceLambdaFrac": "-1"}
+ \end{lstlisting}
+ \begin{itemize}
+ \item Pair MC / WithFitVars subscriptions auto-enable packed PID, track DCA and $\Lambda$ pointing-angle tables.
+ \item Up to four required-PID species occupy packed slots; the producer records \texttt{hPuritySlotAssignment}.
+ \item \texttt{puritySlotMask} chooses exactly one slot: \texttt{"1"}, \texttt{"2"}, \texttt{"4"} or \texttt{"8"}. Only proton PID is required here, so proton occupies slot 0 (mask \texttt{"1"}).
+ \end{itemize}
+ \small Producer-only MC derivation also needs forced-on MC particle, mother and label tables, plus these FitVars tables and matching writer descriptors.
+ \note{Neutral pion PID does not reserve a packed purity slot. The supplied mc-writer.json and producer-derived.json explicitly include FitVars, MC truth, labels and the full QA tables, so the derived MC file can serve both QA and pairing. Our compact six-table data derivation intentionally cannot support this mode.}
+ \src{O2Physics/PWGCF/Femto/Core/trackBuilder.h; O2Physics/PWGCF/Femto/Core/mcBuilder.h; O2Physics/PWGCF/Femto/Core/v0Builder.h}
+\end{frame}
+
+\begin{frame}[fragile]{FitVars in same and mixed events}
+ \begin{lstlisting}
+femto-pair-track-v0/
+  Track1/SE/FitVars/       Track1/ME/FitVars/
+    hTpcPurity, hTofPurity, hTpctofPurity, ...
+    hFractionDca, hPrimary, hFromMaterial, ...
+  Lambda1/SE/Analysis/    Lambda1/ME/Analysis/
+    hMass
+  Lambda1/SE/FitVars/     Lambda1/ME/FitVars/
+    hFractionCpa, hPrimary, hFromSecondary, ...
+ \end{lstlisting}
+ \begin{block}{The sampling matters}
+ SE: each selected constituent once per collision that contributes an accepted pair.\par
+ ME: constituents are filled for every accepted mixed-event pair.\par
+ Separate SE/ME fits therefore retain their respective composition and weighting.
+ \end{block}
+ \note{In this checkout the SE constituent loop fills all selected, particle-cleaner-passing candidates in an event with at least one accepted pair; it is not restricted to the unique constituents of accepted pairs. ME histograms are pair-weighted. Do not silently interpret the SE constituent fraction as an exactly pair-weighted pair fraction. Pair track histograms group secondary mothers in hFromSecondaryOther because no QA-binning mother list is passed to their manager. The output has no kstar axis in these constituent FitVars; kstar-differential extraction needs dedicated binning/wagons or further implementation.}
+ \src{O2Physics/PWGCF/Femto/Core/pairProcessHelpers.h; O2Physics/PWGCF/Femto/Core/trackHistManager.h; O2Physics/PWGCF/Femto/Core/v0HistManager.h}
+\end{frame}
+
+\begin{frame}{MC particle cleaning: optional truth restrictions}
+ \footnotesize \texttt{TrackCleaner1} and \texttt{LambdaCleaner1} apply before pairing.
+ \renewcommand{\arraystretch}{1.18}
+ \begin{tabular}{p{.46\textwidth}p{.48\textwidth}}
+ \toprule
+ Configurable & Purpose\\\midrule
+ \texttt{activate} & Enables MC particle cleaning; \texttt{"false"} in this demo retains contamination.\\
+ \texttt{requiredPdgCodes}, \texttt{rejectedPdgCodes} & Keep / veto particle truth species.\\
+ \texttt{rejectParticleWithoutMcParticle} & Requires a truth association.\\
+ \texttt{rejectParticleWithoutMcMother} & Requires a direct mother.\\
+ \texttt{rejectParticleWithoutMcPartonicMother} & Requires a partonic mother.\\
+ \texttt{requiredMotherPdgCodes}, \texttt{rejectMotherPdgCodes} & Keep / veto direct-mother species.\\
+ \texttt{requiredPartonicMotherPdgCodes}, \texttt{rejectPartonicMotherPdgCodes} & Keep / veto partonic-mother species.\\\bottomrule
+ \end{tabular}
+ \par\medskip
+ \texttt{activateMotherKinematics}: adds \texttt{motherPtMin/Max}, \texttt{motherEtaMin/Max}, \texttt{motherRapidityMin/Max}, \texttt{motherPhiMin/Max}.
+ \note{Truth cleaning changes the sample and can remove the components one wants to measure in a purity/fraction study. It is separate from always-on shared-track pair cleaning and from PairCuts common-ancestor requirements. Arrays are represented as values arrays of strings in JSON.}
+ \src{O2Physics/PWGCF/Femto/Core/particleCleaner.h}
+\end{frame}
+
+\begin{frame}{MC demonstration: local and Hyperloop}
+ \begin{itemize}
+ \item Local full workflow: \texttt{examples/04-mc-reco/run.sh}, MC input list, reconstructed QA and MC pairing.
+ \item Producer-only MC derivation: \texttt{produce.sh}, with explicit QA, FitVars and truth tables written to \texttt{FemtoMC.root}.
+ \item Standalone MC analysis: \texttt{analyze.sh}; the same QA and pair consumers read the derived MC tables.
+ \item Hyperloop: MC dataset and matching helper processes, or the derived MC dataset with consumer wagons only.
+ \end{itemize}
+ \begin{block}{Reproducible configuration}
+ All examples retain string-valued DPL configurables, explicit process switches and matching masks. Producer metadata documents the available decisions and purity slots.
+ \end{block}
+ \src{O2Physics/PWGCF/Femto/TableProducer/femtoProducer.cxx; O2Physics/PWGCF/Femto/Tasks/femtoPairTrackV0.cxx}
+\end{frame}

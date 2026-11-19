@@ -1,0 +1,26 @@
+{
+  "OutputDirector": {
+    "resfile": "FemtoDerived",
+    "resfilemode": "RECREATE",
+    "OutputDescriptors": [
+      {
+        "table": "AOD/FCOL/1"
+      },
+      {
+        "table": "AOD/FCOLMASK/1"
+      },
+      {
+        "table": "AOD/FTRACK/1"
+      },
+      {
+        "table": "AOD/FTRACKMASK/1"
+      },
+      {
+        "table": "AOD/FLAMBDA/1"
+      },
+      {
+        "table": "AOD/FLAMBDAMASK/2"
+      }
+    ]
+  }
+}

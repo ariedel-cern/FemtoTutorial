@@ -1,0 +1,140 @@
+% Archived standalone producer explanations; not included by main.tex.
+\section{Configuring the producer}
+
+\begin{frame}[shrink=8]{Producer configurables: three questions per object}
+ \small
+ \renewcommand{\arraystretch}{1.2}
+ \begin{tabular}{p{.24\textwidth}p{.29\textwidth}p{.37\textwidth}}
+ \toprule
+ Group & Question & Track example\\
+ \midrule
+ \texttt{*Filters} & Which candidates enter the selection? & \texttt{TrackFilters.ptMin}\\
+ \texttt{*Bits} & Which decisions are evaluated and encoded? & \texttt{TrackBits.tpcClustersMin}\\
+ \texttt{*Tables} & Which output tables are filled? & \texttt{TrackTables.produceTracks}\\
+ \bottomrule
+ \end{tabular}
+ \medskip
+ \begin{block}{The same pattern across particle builders}
+ Collisions, tracks, V0s, cascades and other candidates have their own configuration groups. The producer brings these builders together.
+ \end{block}
+ \textbf{Process switches are another layer:} activate the producer process matching the system, data/MC and input candidate types.
+ \note{The wildcard names express the design pattern, not literal JSON keys. Check each builder for exact prefixes: the local collision prefilter prefix is CollisionFilter (singular), while the track prefix is TrackFilters. Enabling an output table alone does not activate the process that fills it.}
+ \src{O2Physics/PWGCF/Femto/TableProducer/femtoProducer.cxx; O2Physics/PWGCF/Femto/Core/trackBuilder.h; O2Physics/PWGCF/Femto/Core/collisionBuilder.h}
+\end{frame}
+
+\begin{frame}[fragile,shrink=8]{Prefilters define the production acceptance}
+ \small
+ \begin{lstlisting}
+ TrackFilters.ptMin  = 0.2
+ TrackFilters.ptMax  = 6.0
+ TrackFilters.etaMin = -0.9
+ TrackFilters.etaMax =  0.9
+ \end{lstlisting}
+ These are the local default values shown as option names and values.
+ \begin{itemize}\setlength{\itemsep}{2pt}
+ \item Fixed bounds run before bit selections; failed standalone candidates are removed.
+ \item Consumer kinematic cuts can narrow this acceptance later.
+ \end{itemize}
+ \begin{block}{Choose an envelope covering the planned analyses}
+ Producing only $p_{\mathrm T}>0.5$ GeV/$c$ cannot support a later standalone-track analysis down to $0.2$ GeV/$c$.
+ \end{block}
+ \small Prefilter QA: \texttt{hTrackFilters}. Collision bounds use \texttt{CollisionFilter.*}, e.g. \texttt{CollisionFilter.vtxZMin}.
+ \note{For tracks these bounds are strict comparisons. The standalone fill loop checks filters, then bit selections, then acceptance, and finally fills the output. Composite-candidate daughter tracks may enter via their own builder path, so avoid claiming all rows of the shared track table must obey the standalone prefilter. TrackBits.passThrough bypasses the bit acceptance gate, not this prefilter.}
+ \src{O2Physics/PWGCF/Femto/Core/trackBuilder.h}
+\end{frame}
+
+\begin{frame}[fragile,shrink=8]{Bit selections define the stored working points}
+ \begin{lstlisting}
+ TrackBits.tpcClustersMin = [90, 100, 110]
+ TrackBits.tpcProton      = ["-3;3", "-2.5;2.5"]
+ TrackBits.requirePidProton = true
+ \end{lstlisting}
+ \small Illustrative option values, not a complete producer configuration.
+ \begin{itemize}
+ \item A vector configures several thresholds or ranges for one observable.
+ \item TPC cluster quality is minimal: 90 is the baseline; 100 and 110 provide tighter decisions.
+ \item \texttt{requirePidProton=true} marks configured proton PID selections as optional in the producer acceptance logic.
+ \item With \texttt{false}, configured proton PID selections are neutral instead.
+ \end{itemize}
+ \begin{block}{Producer settings $\to$ metadata $\to$ consumer masks}
+ Inspect \texttt{hTrackSelection} with CutCulator. The loosest quality bit may be omitted; use the stored mapping to choose tighter quality and PID requirements.
+ \end{block}
+ \note{The values above illustrate C++ vector contents, not literal full JSON serialization. The addSelection calls mark track quality as minimal and skip the loosest bit. PID ranges carry bits; requirePidProton controls their optional role, despite the potentially misleading word require. Several configured optional observables/species still form an OR at producer acceptance. Configure all desired species and tighter working points before production.}
+ \src{O2Physics/PWGCF/Femto/Core/trackBuilder.h}
+\end{frame}
+
+\begin{frame}[fragile]{Tables separate the compact core from extra information}
+ \begin{lstlisting}[language=C++]
+ // Standard track-pair consumer joins matching rows:
+ using FemtoTracks = o2::soa::Join<o2::aod::FTracks,
+                                 o2::aod::FTrackMasks>;
+ \end{lstlisting}
+ \small
+ \renewcommand{\arraystretch}{1.25}
+ \begin{tabular}{p{.27\textwidth}p{.35\textwidth}p{.28\textwidth}}
+ \toprule
+ Content & Table examples & Producer switches\\
+ \midrule
+ Collision context + mask & \texttt{FCols}, \texttt{FColMasks} & \texttt{CollisionTables.*}\\
+ Track kinematics + mask & \texttt{FTracks}, \texttt{FTrackMasks} & \texttt{TrackTables.*}\\
+ Optional observables & \texttt{FTrackDcas}, \texttt{FTrackExtras}, \texttt{FTrackMass} & \texttt{TrackTables.*}\\
+ PID / purity information & \texttt{FProtonPids}, \texttt{FTpcPurity}, \ldots & \texttt{TrackTables.*}\\
+ \bottomrule
+ \end{tabular}
+ \medskip
+ Collision indices link tracks to their event. Extension tables supply extra columns for the corresponding base rows.
+ \note{An soa::Join here combines row-aligned columns rather than doing an arbitrary key-based SQL join. The base track table contains collision association and kinematics; the mask lives in its own extension table. Additional data increase the output size but enable studies beyond stored Boolean cuts. Composite channels also need daughter/index dependencies. Lite base tables are alternatives to full base tables in this installation; do not enable both representations simultaneously.}
+ \src{O2Physics/PWGCF/Femto/DataModel/FemtoTables.h; O2Physics/PWGCF/Femto/Core/trackBuilder.h; O2Physics/PWGCF/Femto/Core/collisionBuilder.h}
+\end{frame}
+
+\begin{frame}{Table switches: auto, forced off, forced on}
+ \small All \texttt{produce*} options in these table groups use integer settings:
+ \medskip
+ \renewcommand{\arraystretch}{1.45}
+ \begin{tabular}{clp{.64\textwidth}}
+ \toprule
+ Value & Mode & Effect\\
+ \midrule
+ \texttt{-1} & Auto & Enable when the table is required in the current workflow.\\
+ \texttt{0} & Forced off & Do not fill the table, even if a consumer needs it.\\
+ \texttt{1} & Forced on & Fill the table independently of consumer demand.\\
+ \bottomrule
+ \end{tabular}
+ \medskip
+ \begin{columns}[T]
+ \begin{column}{.48\textwidth}
+ \begin{block}{Full workflow: producer + consumer}
+ Leave tables on \textbf{auto}. The consumer's table inputs identify what the workflow needs.
+ \end{block}
+ \end{column}
+ \begin{column}{.48\textwidth}
+ \begin{block}{Producing derived data for later}
+ \textbf{Force on} the tables to preserve. Future consumers are absent from the current workflow.
+ \end{block}
+ \end{column}
+ \end{columns}
+ \note{utils::enableTable first handles 1 and 0 explicitly, otherwise calls isTableRequiredInWorkflow. Use the documented -1 value for auto. Auto inspects the current workflow, not future analysis requirements. Disabling a required table can leave missing or empty inputs; it is not a safe way to optimize a consumer workflow. Enabling filling and selecting tables for the output writer are separate decisions.}
+ \src{O2Physics/PWGCF/Femto/Core/femtoUtils.h}
+\end{frame}
+
+\begin{frame}[fragile,shrink=8]{Derived-data production: declare what to preserve}
+ \begin{lstlisting}
+ # Standard collision/track core for later track-pair analysis:
+ CollisionTables.produceCollisions     = 1
+ CollisionTables.produceCollisionMasks = 1
+ TrackTables.produceTracks             = 1
+ TrackTables.produceTrackMasks         = 1
+ # Example extension for a later DCA study:
+ TrackTables.produceTrackDcas          = 1
+ \end{lstlisting}
+ \small Option/value sketch; process selection and output-writer settings are additional configuration.
+ \begin{enumerate}
+ \item Enable the required producer process and any input dependencies.
+ \item Force on the base, mask, extension and index-dependency tables needed later.
+ \item Configure the derived-data writer to persist those tables.
+ \item Keep producer QA for CutCulator; check the written table inventory.
+ \end{enumerate}
+ \textbf{Local and Hyperloop:} use the same table-selection logic; inspect the enabled-table logs and saved output in both cases.
+ \note{This is the standard full-table track path, not a universal minimal dataset for every analysis. A purity study or composite channel needs more tables. Force on does not itself write an AO2D file; the writer must select/persist the produced tables. AnalysisResults.root holds QA histograms, while derived tables go to the configured AOD output. Full versus Lite representations are mutually exclusive in the local builders; Lite data need the corresponding conversion path before a standard full-table consumer. Avoid presenting this sketch as runnable shell syntax or a complete JSON configuration.}
+ \src{O2Physics/PWGCF/Femto/Core/trackBuilder.h; O2Physics/PWGCF/Femto/Core/collisionBuilder.h}
+\end{frame}

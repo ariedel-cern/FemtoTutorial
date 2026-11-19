@@ -1,0 +1,20 @@
+.cache/
+outputs/
+examples/**/AnalysisResults.root
+examples/**/QAResults.root
+examples/**/dpl-config.json
+examples/**/workflow.json
+examples/**/run.log
+examples/**/core_dump_*
+
+AO2D_MC.root
+examples/**/FemtoDerived.root
+examples/**/FemtoMerged.root
+examples/**/FemtoMC.root
+examples/**/ProducerResults.root
+examples/**/FemtoSkim.root
+
+# Downloadable input and obsolete generated slide output
+/AO2D.root
+/slides/introduction.pdf
+__pycache__/

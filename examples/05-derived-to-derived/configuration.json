@@ -1,0 +1,66 @@
+{
+  "femto-producer-derived-to-derived": {
+    "processTracks": "false",
+    "processTracksLambdas": "true",
+    "CollisionSelection": {
+      "vtxZMin": "-10",
+      "vtxZMax": "10",
+      "multMin": "0",
+      "multMax": "5000",
+      "centMin": "0",
+      "centMax": "100",
+      "magFieldMin": "-5",
+      "magFieldMax": "5",
+      "collisionMask": "0"
+    },
+    "TrackSelection1": {
+      "pdgCodeAbs": "2212",
+      "chargeAbs": "1",
+      "chargeSign": "0",
+      "ptMin": "0.3",
+      "ptMax": "4.0",
+      "etaMin": "-0.8",
+      "etaMax": "0.8",
+      "phiMin": "0",
+      "phiMax": "6.28318548",
+      "massMin": "0",
+      "massMax": "99",
+      "maskLowMomentum": "64",
+      "maskHighMomentum": "256",
+      "rejectionMaskLowMomentum": "0",
+      "rejectionMaskHighMomentum": "0",
+      "pidThres": "0.75",
+      "puritySlotMask": "1"
+    },
+    "TrackTables": {
+      "limitTrack1": "1",
+      "limitTrack2": "0"
+    },
+    "LambdaSelection1": {
+      "pdgCodeAbs": "3122",
+      "ptMin": "0.3",
+      "ptMax": "6",
+      "etaMin": "-0.8",
+      "etaMax": "0.8",
+      "phiMin": "0",
+      "phiMax": "6.28318548",
+      "massMin": "1.11",
+      "massMax": "1.12",
+      "mask": "15",
+      "sign": "1"
+    },
+    "V0Tables": {
+      "limitLambda": "1",
+      "limitK0short": "0"
+    },
+    "CollisionDownsampling": {
+      "fraction": "1",
+      "seed": "42"
+    }
+  },
+  "femto-producer-lite-converter": {
+    "processLiteCols": "true",
+    "processLiteTracks": "true",
+    "processLiteLambdas": "true"
+  }
+}

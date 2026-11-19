@@ -1,0 +1,201 @@
+% Previous standalone explanations, retained for reference; not included in the presentation.
+\begin{frame}[shrink=8]{Track partitions: configurable names}
+        \small Groups: \texttt{TrackSelection1},
+        \texttt{TrackSelection2}, \ldots\par
+        \medskip
+        \footnotesize
+        \renewcommand{\arraystretch}{1.0}
+        \begin{tabular}{p{.53\textwidth}p{.39\textwidth}}
+                \toprule
+                Configurable & Meaning\\
+                \midrule
+                \texttt{pdgCodeAbs} & PDG code for the mass hypothesis.\\
+                \texttt{chargeSign}, \texttt{chargeAbs} & Sign and
+                absolute charge.\\
+                \texttt{ptMin}, \texttt{ptMax} & Transverse-momentum range.\\
+                \texttt{etaMin}, \texttt{etaMax} & Pseudorapidity range.\\
+                \texttt{phiMin}, \texttt{phiMax} & Azimuthal-angle range.\\
+                \texttt{maskLowMomentum}, \texttt{maskHighMomentum} &
+                Required bits below/above threshold.\\
+                \texttt{pidThres} & Momentum threshold (GeV/$c$).\\
+                \texttt{rejectionMaskLowMomentum},\newline\texttt{rejectionMaskHighMomentum}
+                & Veto bits below/above threshold.\\
+                \texttt{massMin}, \texttt{massMax} & TOF mass
+                (optional process).\\
+                \texttt{puritySlotMask} & Purity slots (FitVars only).\\
+                \bottomrule
+        \end{tabular}
+        \medskip
+        \footnotesize\textbf{Helium-3:} stored $p_{\mathrm T}/|Z|$ is
+        scaled by \texttt{chargeAbs = 2}; most particles have $|Z|=1$.\par
+        \textbf{\texttt{chargeSign = 0}:} keep both charge signs,
+        useful in derived-to-derived production.
+        \note{Names are copied from ConfTrackSelection in the local
+                installation. Use the group prefix in full option names, for
+                example TrackSelection1.ptMin. pdgCodeAbs sets a mass
+                hypothesis rather than imposing PID. Stored signedPt is a
+                signed rigidity-like quantity; the partition uses
+                abs(chargeAbs * signedPt) for physical transverse momentum.
+                For helium-3 and anti-helium-3 set chargeAbs=2. chargeSign=0
+                removes the charge-sign restriction, useful when retaining
+                both charges in derived-to-derived production. The
+                FitVars-specific puritySlotMask controls QA output, not a
+                partition cut. Partitions may overlap. Values must remain
+        within what the producer retained.}
+        \src{O2Physics/PWGCF/Femto/Core/trackBuilder.h;
+        O2Physics/PWGCF/Femto/Core/partitions.h}
+\end{frame}
+
+\begin{frame}[shrink=8]{Example: $\Lambda$ partition configurables}
+        \small Groups: \texttt{LambdaSelection1},
+        \texttt{LambdaSelection2}, \ldots\par
+        Example full name: \texttt{LambdaSelection1.massMin}.
+        \medskip
+        \footnotesize
+        \renewcommand{\arraystretch}{1.3}
+        \begin{tabular}{p{.43\textwidth}p{.49\textwidth}}
+                \toprule
+                Configurable & Meaning\\
+                \midrule
+                \texttt{pdgCodeAbs} & Mass hypothesis ($3122$ for $\Lambda$).\\
+                \texttt{sign} & $+1$: $\Lambda$; $-1$:
+                $\overline\Lambda$; $0$: both.\\
+                \texttt{ptMin}, \texttt{ptMax} & Candidate
+                transverse-momentum range.\\
+                \texttt{etaMin}, \texttt{etaMax} & Candidate
+                pseudorapidity range.\\
+                \texttt{phiMin}, \texttt{phiMax} & Candidate
+                azimuthal-angle range.\\
+                \texttt{massMin}, \texttt{massMax} & Invariant-mass
+                window or sideband.\\
+                \texttt{mask} & Required topology and daughter-selection bits.\\
+                \bottomrule
+        \end{tabular}
+        \medskip
+        \small
+        \textbf{Example: $\Lambda\to p\pi^-$.} Set \texttt{sign = 1};
+        obtain \texttt{mask} from \texttt{hLambdaSelection} with CutCulator.
+        \par\medskip
+        \textbf{\texttt{sign = 0}:} keep both $\Lambda$ and
+        $\overline\Lambda$, useful in derived-to-derived production.
+        \note{Names are copied from ConfLambdaSelection and
+                V0_DEFAULT_SELECTIONS. Lambda is an example of the partition
+                concept. The consumer uses one V0 mask rather than track
+                low/high momentum masks. sign distinguishes Lambda from
+                anti-Lambda, not electric charge. Topology bits include
+                pointing angle, daughter DCA, decay vertex and transverse
+                radius. The mass range is limited by producer acceptance. For
+        anti-Lambda metadata use hAntiLambdaSelection.}
+        \src{O2Physics/PWGCF/Femto/Core/v0Builder.h;
+        O2Physics/PWGCF/Femto/Core/partitions.h}
+\end{frame}
+
+\begin{frame}{From selected particles to a correlation}
+        \begin{columns}[T]
+                \begin{column}{.48\textwidth}
+                        \begin{block}{Same event: $A(k^*)$}
+                                Partition 1, event $i$\par
+                                $\qquad\times$ partition 2, event
+                                $i$\par\medskip
+                                Retains the physical correlations.
+                        \end{block}
+                \end{column}
+                \begin{column}{.48\textwidth}
+                        \begin{block}{Mixed events: $B(k^*)$}
+                                Partition 1, event $i$\par
+                                $\qquad\times$ partition 2, event
+                                $j\ne i$\par\medskip
+                                Build a reference using similar events.
+                        \end{block}
+                \end{column}
+        \end{columns}
+        \begin{itemize}
+                \item Mix within suitable vertex and
+                        multiplicity/centrality classes.
+                \item Apply pair cleaning and close-pair rejection as
+                        appropriate.
+                \item Exclude self-pairs and handle duplicate
+                        combinations for identical samples.
+                \item Fill same- and mixed-event pair distributions.
+        \end{itemize}
+        \note{Mixed-event pairs provide a reference, not an automatic
+                correction of every detector or event-class effect. Inspect
+                mixing QA. Pair cleaning matters for shared daughters in
+                composite-particle channels. Purity/fraction corrections and
+        physics fits are later analysis steps.}
+        \src{O2Physics/PWGCF/Femto/Tasks/femtoPairTrackTrack.cxx;
+        O2Physics/PWGCF/Femto/Core/pairBuilder.h}
+\end{frame}
+
+\begin{frame}{One workflow, demonstrated locally and on Hyperloop}
+        \centering
+        \begin{tikzpicture}[node
+                        distance=6mm,box/.style={draw=teal,rounded
+                                corners,fill=pale,text width=2.7cm,minimum
+                height=18mm,align=center},>=Stealth]
+                \node[box] (a) {Produce\\\small AO2D $\to$ derived data};
+                \node[box,right=of a] (b) {Choose\\\small QA file
+                $\to$ CutCulator};
+                \node[box,right=of b] (c) {Analyze\\\small partitions
+                $\to$ pairs};
+                \node[box,right=of c] (d) {Inspect\\\small QA and correlations};
+                \draw[->,thick] (a)--(b);\draw[->,thick]
+                (b)--(c);\draw[->,thick] (c)--(d);
+        \end{tikzpicture}
+        \medskip
+        \begin{columns}[T]
+                \begin{column}{.48\textwidth}
+                        \begin{block}{Local demonstration}
+                                A small input sample, explicit
+                                task/configuration files, immediate
+                                output inspection.
+                        \end{block}
+                \end{column}
+                \begin{column}{.48\textwidth}
+                        \begin{block}{Hyperloop demonstration}
+                                Corresponding workflows and options
+                                at production scale; inspect the
+                                retrieved ROOT output with the same tools.
+                        \end{block}
+                \end{column}
+        \end{columns}
+        \medskip
+        \raggedright\textbf{Keep together:} software revision,
+        producer configuration, producer QA metadata, derived-data
+        provenance and consumer settings.
+        \note{Transition into the live demos; no exercises. This
+                introductory deck does not claim that a Hyperloop train is
+                already configured. 
+                Local modifications and Hyperloop software versions must
+        agree where schema, masks and task options matter.}
+\end{frame}
+
+\input{slides/producer-configuration.tex}
+
+\begin{frame}{Code and tools used in this introduction}
+        \small Source paths relative to \texttt{O2Physics/PWGCF/Femto/}:
+        \begin{itemize}
+                \item \texttt{TableProducer/femtoProducer.cxx}:
+                        production entry point.
+                \item \texttt{Core/trackBuilder.h}: track
+                        configuration and selections.
+                \item \texttt{Core/baseSelection.h},
+                        \texttt{Core/selectionContainer.h}: roles,
+                        acceptance and bit assignment.
+                \item \texttt{Macros/cutculator.py},
+                        \texttt{Macros/cutculator\_gui.py}: terminal
+                        and GUI tools.
+                \item \texttt{Core/partitions.h}: selection expressions.
+                \item \texttt{Tasks/femtoPairTrackTrack.cxx}: consumer example.
+                \item \texttt{Core/collisionBuilder.h},
+                        \texttt{Core/femtoUtils.h}: table switches.
+        \end{itemize}
+        \medskip
+        Source checkout: \texttt{\$HOME/alice/O2Physics}\par
+        \medskip
+        \href{https://github.com/AliceO2Group/O2Physics/tree/master/PWGCF/Femto}{Upstream:
+        AliceO2Group/O2Physics, PWGCF/Femto}
+        \note{The installed checkout is the primary reference. In
+                particular, GUI export and TUI decode features described here
+        are verified in the local Python source; upstream master may differ.}
+\end{frame}

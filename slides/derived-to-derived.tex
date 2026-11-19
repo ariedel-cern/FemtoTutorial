@@ -1,0 +1,135 @@
+\section{Derived-to-derived production}
+
+\begin{frame}{Derived-to-derived: make a smaller analysis dataset}
+ \centering
+ \begin{tikzpicture}[node distance=8mm,every node/.style={align=center,font=\small},box/.style={draw=teal,fill=pale,rounded corners,minimum height=12mm}]
+ \node[box] (input) {Derived files\\kinematics + masks};
+ \node[box,right=of input] (skim) {Derived-to-derived\\producer};
+ \node[box,right=of skim] (output) {Smaller derived files\\selected collisions + particles};
+ \draw[->,thick] (input)--(skim);\draw[->,thick] (skim)--(output);
+ \end{tikzpicture}\par
+ \medskip
+ \begin{itemize}
+ \item Applies consumer-style kinematic selections and masks to existing derived tables.
+ \item Keeps collisions with enough selected candidates; optionally downsamples them.
+ \item Rewrites collision and daughter indices while preserving the stored masks.
+ \item Can run again on its own output. Previously discarded information cannot be recovered.
+ \end{itemize}
+ \note{This task does not repeat detector PID or quality evaluation and does not create new threshold decisions. It uses stored kinematics and masks. Daughter tracks are copied as needed even if they do not pass the standalone-track selection, with deduplication and reference remapping. Subsequent consumers still use their particle partitions. Unlike collision tagging, which supplies a selection-dependent tag to mixing, this task creates a persistently smaller dataset.}
+ \src{O2Physics/PWGCF/Femto/TableProducer/femtoProducerDerivedToDerived.cxx; O2Physics/PWGCF/Femto/Core/trackBuilder.h}
+\end{frame}
+
+\begin{frame}[fragile]{Derived-to-derived: familiar particle selections}
+ \begin{lstlisting}
+"CollisionSelection": {"vtxZMin": "-10", "vtxZMax": "10"},
+"TrackSelection1": {
+  "pdgCodeAbs": "2212", "chargeSign": "0", "chargeAbs": "1",
+  "ptMin": "0.3", "ptMax": "4", "pidThres": "0.75",
+  "maskLowMomentum": "64", "maskHighMomentum": "256"
+},
+"LambdaSelection1": {
+  "pdgCodeAbs": "3122", "sign": "1", "mask": "15",
+  "massMin": "1.11", "massMax": "1.12"
+}
+ \end{lstlisting}
+ \begin{itemize}
+ \item The same configurable groups used by QA and pair consumers.
+ \item \texttt{chargeSign = 0} keeps both track charges for later analyses.
+ \item Masks refer to the original producer's bit mapping; skimming preserves that mapping.
+ \end{itemize}
+ \note{These values match the normal-production proton-Lambda example. Masks must instead be computed from the matching metadata for a Hyperloop dataset or passthrough input. The full example JSON carries all kinematic bounds from the pair configuration. Lambda sign 1 keeps Lambda; sign 0 can retain both Lambda and anti-Lambda when the mask selection is appropriate for the supplied production. Keeping both track charges does not mean every retained track will pass a subsequent positive-proton partition.}
+ \src{O2Physics/PWGCF/Femto/Core/partitions.h; O2Physics/PWGCF/Femto/TableProducer/femtoProducerDerivedToDerived.cxx}
+\end{frame}
+
+\begin{frame}[fragile]{Derived-to-derived: candidate counts and downsampling}
+ \begin{lstlisting}
+"TrackTables": {"limitTrack1": "1", "limitTrack2": "0"},
+"V0Tables": {"limitLambda": "1", "limitK0short": "0"},
+"CollisionDownsampling": {"fraction": "1", "seed": "42"}
+ \end{lstlisting}
+ \begin{itemize}
+ \item This example requires at least one selected track and one selected $\Lambda$ per collision.
+ \item A limit of \texttt{0} disables that candidate category: it is neither required nor written as a standalone species.
+ \item \texttt{fraction = 1} keeps all surviving collisions; \texttt{0.1} randomly keeps 10\%.
+ \item A fixed positive seed gives reproducible downsampling; \texttt{0} chooses a time-based seed.
+ \end{itemize}
+ \begin{block}{Daughter references remain valid}
+ \small Required $\Lambda$ daughters are retained in the track table, even when they fail the standalone-track selection.
+ \end{block}
+ \note{Counts are checked on the configured partitions before downsampling and writing. A track category limit 0 does not prevent a composite-particle builder from copying a necessary daughter track. Overlapping track selections and daughter reuse are deduplicated in the output. A sample conditioned on candidate counts has a different collision population from the original production, relevant when interpreting event-normalized quantities and mixing.}
+ \src{O2Physics/PWGCF/Femto/Core/trackBuilder.h; O2Physics/PWGCF/Femto/Core/v0Builder.h; O2Physics/PWGCF/Femto/Core/collisionBuilder.h}
+\end{frame}
+
+\begin{frame}[fragile]{Derived-to-derived: choose the input subscription}
+ \begin{lstlisting}
+"femto-producer-derived-to-derived": {
+  "processTracks": "false",
+  "processTracksLambdas": "true"
+}
+ \end{lstlisting}
+ \begin{itemize}
+ \item Exactly one process function is enabled; its arguments define the required input tables.
+ \item \texttt{processTracksLambdas}: collision, track and $\Lambda$ tables with masks.
+ \item \texttt{processTracksLambdasWithFitVars}: additionally carries packed track PID, DCA and $\Lambda$ fraction variables.
+ \item MC variants additionally need the corresponding truth and label tables.
+ \end{itemize}
+ \small A process cannot preserve observables that were not stored in the input production.
+ \note{The default processTracks is true, so explicitly disabling it is essential when enabling processTracksLambdas. For reconstructed MC with FitVars the matching process is processTracksLambdasMcWithFitVars. The compact six-table data production supports the ordinary process only. No raw-AO2D event-selection, propagation or PID service belongs in this derived-only workflow.}
+ \src{O2Physics/PWGCF/Femto/TableProducer/femtoProducerDerivedToDerived.cxx}
+\end{frame}
+
+\begin{frame}[fragile]{Derived-to-derived: select the rewritten output}
+ \begin{lstlisting}
+"OutputDirector": {
+  "resfile": "FemtoSkim", "resfilemode": "RECREATE",
+  "OutputDescriptors": [
+    {"table": "AOD1/FCOL/1"}, {"table": "AOD1/FCOLMASK/1"},
+    {"table": "AOD1/FTRACK/1"}, {"table": "AOD1/FTRACKMASK/1"},
+    {"table": "AOD1/FLAMBDA/1"}, {"table": "AOD1/FLAMBDAMASK/2"}
+  ]
+}
+ \end{lstlisting}
+ \begin{itemize}
+ \item The rewritten tables use the \texttt{AOD1} output stage, separating them from the \texttt{AOD} input tables in the workflow.
+ \item The resulting file is read as derived input by the usual consumers or by another derived-to-derived pass.
+ \item Collision tagging is recomputed in the analysis workflow for its current selections.
+ \end{itemize}
+ \note{writer.json is local DPL output selection, not DPL task configuration. It must select AOD1 to persist the rewritten tables rather than the original AOD input. The underlying stored table descriptions and versions match the ordinary full-kinematic tables, and the AOD reader exposes the persisted tables to downstream AOD consumers. Hyperloop's derived-data tab must likewise select the task's rewritten outputs.}
+ \src{O2Physics/PWGCF/Femto/DataModel/FemtoTables.h; O2Physics/PWGCF/Femto/Core/v0Builder.h}
+\end{frame}
+
+\begin{frame}[fragile]{Derived-to-derived: Hyperloop first, then local}
+ \begin{itemize}
+ \item Hyperloop wagon: \texttt{o2-analysis-cf-femto-producer-derived-to-derived}, using the existing derived dataset as input.
+ \item Configure selections, candidate limits and the process function; select the rewritten output tables.
+ \item Download the configuration as \texttt{configuration.json} for the matching local workflow.
+ \end{itemize}
+ \begin{lstlisting}[language=bash]
+# examples/05-derived-to-derived/
+# input_data.txt: path to a downloaded derived ROOT file
+bash examples/05-derived-to-derived/run.sh
+ \end{lstlisting}
+ \small The self-contained run script uses \texttt{configuration.json} and \texttt{writer.json}; output is \texttt{FemtoSkim.root}. A later pass can use that file as its input.
+ \note{The script changes into its own directory. CONFIG_FILE and INPUT_DATA_FILE can override the defaults. It invokes only the derived-to-derived executable, with the local writer configuration. Input defaults to the output of the earlier compact derived-data example. Downloaded task configuration must match the producer metadata and table versions of the chosen dataset. --dry-run dumps the workflow without processing.}
+ \src{O2Physics/PWGCF/Femto/TableProducer/femtoProducerDerivedToDerived.cxx}
+\end{frame}
+
+\begin{frame}{Derived-to-derived: four proton--$\Lambda$ datasets}
+ \centering
+ \begin{tikzpicture}[every node/.style={align=center,font=\footnotesize},outputbox/.style={draw=teal,fill=pale,rounded corners,minimum width=51mm,minimum height=8mm}]
+ \node[draw=navy,fill=pale,rounded corners,minimum width=29mm,minimum height=14mm] (input) at (0,0) {Merged derived files\\several runs, both\\field polarities};
+ \coordinate (split) at (2.1,0);
+ \node[font=\small] at (4.1,2.55) {Four independent derived-to-derived passes};
+ \node[outputbox] (pp) at (6,1.8) {$p\Lambda$, $B>0$\quad signs $(+1,+1)$\\\texttt{pLambda\_Bplus.root}};
+ \node[outputbox,draw=blue!65,fill=blue!5] (pm) at (6,.6) {$p\Lambda$, $B<0$\quad signs $(+1,+1)$\\\texttt{pLambda\_Bminus.root}};
+ \node[outputbox] (ap) at (6,-.6) {$\bar p\bar\Lambda$, $B>0$\quad signs $(-1,-1)$\\\texttt{antiPLambda\_Bplus.root}};
+ \node[outputbox,draw=blue!65,fill=blue!5] (am) at (6,-1.8) {$\bar p\bar\Lambda$, $B<0$\quad signs $(-1,-1)$\\\texttt{antiPLambda\_Bminus.root}};
+ \draw[->,thick] (input)--(split);
+ \foreach \target in {pp,pm,ap,am} {\draw[->,thick] (split)--(\target.west);}
+ \end{tikzpicture}\par
+ \footnotesize Signs: \texttt{TrackSelection1.chargeSign}, \texttt{LambdaSelection1.sign}.\par
+ Field selection: \texttt{CollisionSelection.magFieldMin / magFieldMax}.\par\smallskip
+ Merging across runs can put different magnetic-field polarities in the same file; these four outputs keep the analysis samples separate.
+ \note{Each box represents a separate configured production/pass, not four instances writing identical AOD1 tables in one workflow. For positive field use e.g. magFieldMin 0 and magFieldMax 10 kG, and for negative field -10 and 0; bounds must cover the fields of the chosen input. Positive/negative particle selections use chargeSign +1/-1 and Lambda sign +1/-1, with positive absolute PDG codes. Particle and antiparticle masks must be valid for their respective producer selections; do not assume one numerical Lambda mask describes both hypotheses in every production. Give each pass a separate writer resfile or output directory. A file boundary or merged run is not itself a field selection. The pair task also checks field consistency between mixed events; explicit splitting organizes the dataset and avoids spending mixing windows on incompatible polarities.}
+ \src{O2Physics/PWGCF/Femto/TableProducer/femtoProducerDerivedToDerived.cxx; O2Physics/PWGCF/Femto/Core/partitions.h}
+\end{frame}

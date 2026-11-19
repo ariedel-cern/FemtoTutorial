@@ -1,0 +1,26 @@
+{
+  "OutputDirector": {
+    "resfile": "FemtoSkim",
+    "resfilemode": "RECREATE",
+    "OutputDescriptors": [
+      {
+        "table": "AOD1/FCOL/1"
+      },
+      {
+        "table": "AOD1/FCOLMASK/1"
+      },
+      {
+        "table": "AOD1/FTRACK/1"
+      },
+      {
+        "table": "AOD1/FTRACKMASK/1"
+      },
+      {
+        "table": "AOD1/FLAMBDA/1"
+      },
+      {
+        "table": "AOD1/FLAMBDAMASK/2"
+      }
+    ]
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "OutputDirector": {
+    "resfile": "FemtoMC",
+    "resfilemode": "RECREATE",
+    "OutputDescriptors": [
+      {
+        "table": "AOD/FCOL/1"
+      },
+      {
+        "table": "AOD/FCOLMASK/1"
+      },
+      {
+        "table": "AOD/FCOLPOS/1"
+      },
+      {
+        "table": "AOD/FCOLSPHERICITY/1"
+      },
+      {
+        "table": "AOD/FCOLMULT/1"
+      },
+      {
+        "table": "AOD/FCOLCENT/1"
+      },
+      {
+        "table": "AOD/FTRACK/1"
+      },
+      {
+        "table": "AOD/FTRACKMASK/1"
+      },
+      {
+        "table": "AOD/FTRACKMASS/1"
+      },
+      {
+        "table": "AOD/FTRACKDCAS/1"
+      },
+      {
+        "table": "AOD/FTRACKEXTRA/1"
+      },
+      {
+        "table": "AOD/FELECTRONPID/1"
+      },
+      {
+        "table": "AOD/FPIONPID/1"
+      },
+      {
+        "table": "AOD/FKAONPID/1"
+      },
+      {
+        "table": "AOD/FPROTONPID/1"
+      },
+      {
+        "table": "AOD/FDEUTERONPID/1"
+      },
+      {
+        "table": "AOD/FTRITONPID/1"
+      },
+      {
+        "table": "AOD/FHELIUMPID/1"
+      },
+      {
+        "table": "AOD/FITSPURITY/1"
+      },
+      {
+        "table": "AOD/FTPCPURITY/1"
+      },
+      {
+        "table": "AOD/FTOFPURITY/1"
+      },
+      {
+        "table": "AOD/FLAMBDA/1"
+      },
+      {
+        "table": "AOD/FLAMBDAMASK/2"
+      },
+      {
+        "table": "AOD/FLAMBDAEXTRA/1"
+      },
+      {
+        "table": "AOD/FLAMBDAFRAC/1"
+      },
+      {
+        "table": "AOD/FMCCOL/1"
+      },
+      {
+        "table": "AOD/FMCPARTICLE/1"
+      },
+      {
+        "table": "AOD/FMCMOTHER/1"
+      },
+      {
+        "table": "AOD/FMCPARTMOTH/1"
+      },
+      {
+        "table": "AOD/FMCMOTHERLABEL/1"
+      },
+      {
+        "table": "AOD/FCOLMCLABEL/1"
+      },
+      {
+        "table": "AOD/FTRACKLABEL/1"
+      },
+      {
+        "table": "AOD/FLAMBDALABEL/1"
+      }
+    ]
+  }
+}

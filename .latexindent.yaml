@@ -1,0 +1,42 @@
+# Two-space indentation; preserve hand-written line breaks and code examples.
+# Run from the repository root with -l=.latexindent.yaml.
+defaultIndent: '  '
+indentPreamble: 1
+
+noAdditionalIndent:
+  document: 1
+
+# Avoid extra hanging indentation after \item.
+indentAfterItems:
+  itemize: 0
+  enumerate: 0
+  description: 0
+indentRules:
+  item: '  '
+
+# Keep table spacing and listings as written.
+lookForAlignDelims:
+  tabular: 0
+  tabularx: 0
+  array: 0
+verbatimEnvironments:
+  lstlisting: 1
+  verbatim: 1
+  minted: 1
+
+removeTrailingWhitespace:
+  beforeProcessing: 0
+  afterProcessing: 1
+
+# Also disable paragraph reflow if an editor invokes latexindent with -m.
+modifyLineBreaks:
+  preserveBlankLines: 1
+  oneSentencePerLine:
+    manipulateSentences: 0
+  textWrapOptions:
+    columns: 0
+    removeBlockLineBreaks: 0
+    comments:
+      wrap: 0
+
+onlyOneBackUp: 1

@@ -1,0 +1,80 @@
+\section{Example 2: studying cuts with pass-through production}
+
+\begin{frame}[fragile]{Example 2: passthrough mode}
+ \footnotesize
+ \begin{lstlisting}
+ "TrackBits": {
+   "passThrough": "true"
+ }
+ \end{lstlisting}
+ \begin{itemize}
+ \item All track selections become non-mandatory: decisions are stored, but no track is discarded by them.
+ \item Track filter options are ignored for acceptance; no track is discarded by the filters either.
+ \item Every configured decision is stored, including the loosest threshold bits.
+ \item QA consumers reproduce the before/after-cut workflow commonly used in Run 2.
+ \end{itemize}
+ \begin{block}{Each wagon sees the same input}
+ Baseline $\to$ add TPC clusters $\to$ add crossed rows $\to$ add ITS clusters $\to$ add proton PID.
+ \end{block}
+ \small Changing the selection type changes the bit mapping: \textbf{recompute the consumer bitmasks with CutCulator} using the passthrough producer output. Collision selections are unchanged here.
+ \note{In the current local implementation checkFilters returns isPassThrough() || pass, so track prefilters are evaluated for QA but do not reject tracks. BaseSelection makes configured track decisions neutral, stores the loosest bits and bypasses bit-based acceptance; they are not optional acceptance gates in this mode. CollisionBits.passThrough is separate and stays false. The baseline has no additional track cuts but still shares the collision sample and input reconstruction acceptance.}
+ \src{O2Physics/PWGCF/Femto/Core/trackBuilder.h; O2Physics/PWGCF/Femto/Core/baseSelection.h}
+\end{frame}
+
+\begin{frame}[fragile]{Example 2: independent QA wagons in one chain}
+ \begin{lstlisting}[language=bash]
+ o2-analysis-cf-femto-producer "${Options[@]}" |
+ o2-analysis-cf-femto-track-qa "${Options[@]}" --workflow-suffix -base |
+ o2-analysis-cf-femto-track-qa "${Options[@]}" --workflow-suffix -clusters |
+ o2-analysis-cf-femto-track-qa "${Options[@]}" --workflow-suffix -rows |
+ o2-analysis-cf-femto-track-qa "${Options[@]}" --workflow-suffix -its |
+ o2-analysis-cf-femto-track-qa "${Options[@]}" --workflow-suffix -pid |
+ # ... the same helper tasks as in Example 1
+ \end{lstlisting}
+ \small Each suffix creates a separate task and ROOT output directory.\par
+ Configuration keys match the names, e.g.\par
+ \texttt{"femto-track-qa-rows": \{ "TrackSelection1": ... \}}.
+ \medskip
+ \textbf{The cuts are cumulative in the masks, not in task order.} Every wagon reads the producer tables directly.
+ \note{The full executable pipeline is in examples/02-cut-study/run.sh. The displayed pipe is an excerpt. workflow-suffix is applied to each QA executable independently; do not set it globally on the common options. All wagons use the same histogram settings, collision filter and broad track kinematics.}
+ \src{O2Physics/PWGCF/Femto/Tasks/femtoTrackQa.cxx}
+\end{frame}
+
+\begin{frame}{Example 2: cumulative selections}
+ \small \texttt{examples/02-cut-study/configuration.json}
+ \medskip
+ \renewcommand{\arraystretch}{1.3}
+ \begin{tabular}{llcc}
+ \toprule
+ Wagon & Newly added cut & Low-$p$ mask & High-$p$ mask\\
+ \midrule
+ \texttt{base} & None & \texttt{"0"} & \texttt{"0"}\\
+ \texttt{clusters} & TPC clusters $\geq90$ & \texttt{"1"} & \texttt{"1"}\\
+ \texttt{rows} & Crossed rows $\geq100$ & \texttt{"17"} & \texttt{"17"}\\
+ \texttt{its} & ITS clusters $\geq5$ & \texttt{"529"} & \texttt{"529"}\\
+ \texttt{pid} & Proton PID & \texttt{"33297"} & \texttt{"131601"}\\
+ \bottomrule
+ \end{tabular}
+ \medskip
+ Each row retains the previous requirements and adds one more decision.
+ \begin{block}{The incremental effect of each cut}
+ Each wagon has its own QA distributions and retained track count. Differences relative to the preceding wagon show the incremental effect in this cut order.
+ \end{block}
+ \note{These masks were verified against initialization metadata for this pass-through configuration. Individual bits are TPC clusters >=90: 1, crossed rows >=100: 16, ITS clusters >=5: 512, TPC proton PID: 32768, combined TPCTOF proton PID: 131072. The latter two are used below/above pidThres=0.75 respectively. All track signs are kept. This is an ordered cut study, not a claim of independent per-cut efficiencies.}
+ \src{O2Physics/PWGCF/Femto/Core/partitions.h; O2Physics/PWGCF/Femto/Tasks/femtoTrackQa.cxx}
+\end{frame}
+
+\begin{frame}[fragile]{Example 2: QA comparison}
+ \begin{lstlisting}[language=bash]
+ bash examples/02-cut-study/run.sh
+ \end{lstlisting}
+ \begin{itemize}
+ \item The same root-level AO2D is referenced by \texttt{input\_data.txt}.
+ \item Output: \texttt{examples/02-cut-study/AnalysisResults.root}.
+ \item Separate outputs: \texttt{femto-track-qa-base}, \texttt{-clusters}, \texttt{-rows}, \texttt{-its} and \texttt{-pid}.
+ \end{itemize}
+ \medskip
+ \textbf{On Hyperloop:} the equivalent workflow has one pass-through producer and five uniquely named QA wagons with the same cumulative masks and separate outputs.
+ \note{Two-dimensional plots are disabled in this example to keep the repeated QA output small. Enable the same plot options in all wagons if more detailed PID studies are needed.}
+ \src{O2Physics/PWGCF/Femto/Tasks/femtoTrackQa.cxx}
+\end{frame}

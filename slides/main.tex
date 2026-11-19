@@ -1,0 +1,53 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{booktabs,array,tikz,listings,eso-pic}
+\usetikzlibrary{arrows.meta,positioning}
+\definecolor{navy}{HTML}{17324D}
+\definecolor{teal}{HTML}{007F86}
+\definecolor{pale}{HTML}{EDF5F6}
+\setbeamercolor{structure}{fg=teal}
+\setbeamercolor{frametitle}{fg=navy}
+\setbeamercolor{block title}{bg=teal,fg=white}
+\setbeamercolor{block body}{bg=pale,fg=navy}
+\setbeamercolor{normal text}{fg=navy,bg=white}
+\setbeamertemplate{navigation symbols}{}
+\newcommand{\alicelogo}[1]{\includegraphics[height=#1]{slides/assets/alice-emblem.png}}
+\setbeamertemplate{headline}{%
+        \begin{beamercolorbox}[wd=\paperwidth,ht=3mm,dp=0mm]{normal text}%
+        \end{beamercolorbox}}
+% Paint corner logos last, independently of fragile-frame content and TikZ positions.
+\AddToShipoutPictureFG{%
+        \ifnum\value{framenumber}>1\relax
+                \AtPageUpperLeft{%
+                        \put(\LenToUnit{\dimexpr\paperwidth-5mm\relax},\LenToUnit{-7mm}){%
+                                \makebox[0pt][r]{\alicelogo{6mm}\hspace{3mm}%
+                                        \includegraphics[height=5mm]{slides/assets/tum-logo.pdf}}}}
+        \fi}
+\setbeamertemplate{footline}{%
+        \begin{beamercolorbox}[wd=\paperwidth,ht=3mm,dp=2mm]{normal text}
+                \hspace{4mm}%
+                \tiny Anton
+                Riedel\enspace\textbar\enspace\href{mailto:anton.riedel@cern.ch}{anton.riedel@cern.ch}%
+                \hfill\insertframenumber\,/\,\inserttotalframenumber\hspace{4mm}
+\end{beamercolorbox}}
+\setbeamersize{text margin left=8mm,text margin right=8mm}
+\lstset{basicstyle=\ttfamily\scriptsize,breaklines=true,columns=fullflexible,keepspaces=true,showstringspaces=false,backgroundcolor=\color{pale},frame=none,xleftmargin=2mm,xrightmargin=2mm}
+\newcommand{\src}[1]{\vfill{\tiny\color{gray} Local source:
+\texttt{\detokenize{#1}}}}
+\title{Hands on: femto framework}
+\subtitle{From particle selections to correlations}
+\author[Anton Riedel]{\texorpdfstring{Anton
+        Riedel\\[1mm]\small\href{mailto:anton.riedel@cern.ch}{anton.riedel@cern.ch}}{Anton
+Riedel}}
+\institute{Technical University of Munich}
+\date{}
+\begin{document}
+\input{slides/introduction.tex}
+\input{slides/example-proton-lambda.tex}
+\input{slides/example-cut-study.tex}
+\input{slides/example-derived-data.tex}
+\input{slides/derived-to-derived.tex}
+\input{slides/example-mc-reco.tex}
+\input{slides/summary.tex}
+\end{document}
